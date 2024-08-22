@@ -1,23 +1,17 @@
-package org.cobbzilla.util.yml.main;
+package ch.zizka.yaml.merger.main;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
-import org.cobbzilla.util.yml.YmlMerger;
 
-/**
- * (c) Copyright 2013 Jonathan Cobb
- * This code is available under the Apache License, version 2: http://www.apache.org/licenses/LICENSE-2.0.html
- */
-public class MergeYml {
+import ch.zizka.yaml.merger.YamlMerger;
+
+public class MergeYaml {
 
     public static void main (String[] args) throws Exception {
 
-        YmlMerger yamlMerger = new YmlMerger();
+        YamlMerger yamlMerger = new YamlMerger();
         yamlMerger.setVariablesToReplace(System.getenv());
 
         List<Path> filesToMerge = new ArrayList<>();

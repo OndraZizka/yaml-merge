@@ -1,4 +1,4 @@
-package org.cobbzilla.util.yml;
+package ch.zizka.yaml.merger;
 
 import com.github.mustachejava.DefaultMustacheFactory;
 import java.io.File;
@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -24,20 +25,16 @@ import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
-/**
- * (c) Copyright 2013-2015 Jonathan Cobb
- * This code is available under the Apache License, version 2: http://www.apache.org/licenses/LICENSE-2.0.html
- */
-public class YmlMerger
+public class YamlMerger
 {
 
-    private static final Logger LOG = LoggerFactory.getLogger(YmlMerger.class);
+    private static final Logger LOG = LoggerFactory.getLogger(YamlMerger.class);
     public static final DefaultMustacheFactory DEFAULT_MUSTACHE_FACTORY = new DefaultMustacheFactory();
 
     private final Yaml snakeYaml;
-    private Map<String, Object> variablesToReplace = new HashMap<String, Object>();
+    private final Map<String, Object> variablesToReplace = new HashMap<>();
 
-    public YmlMerger()
+    public YamlMerger()
     {
         // See https://github.com/spariev/snakeyaml/blob/master/src/test/java/org/yaml/snakeyaml/DumperOptionsTest.java
         DumperOptions dumperOptions = new DumperOptions();
@@ -48,7 +45,7 @@ public class YmlMerger
         this.snakeYaml = new Yaml(dumperOptions);
     }
 
-    public YmlMerger setVariablesToReplace(Map<String, String> vars) {
+    public YamlMerger setVariablesToReplace(Map<String, String> vars) {
         this.variablesToReplace.clear();
         this.variablesToReplace.putAll(vars);
         return this;
@@ -65,7 +62,7 @@ public class YmlMerger
      */
     public Map<String, Object> mergeYamlFiles(List<Path> paths) throws IOException
     {
-        Map<String, Object> mergedResult = new LinkedHashMap<String, Object>();
+        Map<String, Object> mergedResult = new LinkedHashMap<>();
         for (Path yamlFilePath : paths) {
             InputStream in = null;
             try {
@@ -75,7 +72,7 @@ public class YmlMerger
 
                 // Read the YAML file into a String
                 in = new FileInputStream(file);
-                final String entireFile = IOUtils.toString(in);
+                final String entireFile = IOUtils.toString(in, StandardCharsets.UTF_8); // TBD allow setting the charset?
 
                 // Substitute variables. TODO: This should be done by a resolver when parsing.
                 int bufferSize = entireFile.length() + 100;
@@ -84,7 +81,7 @@ public class YmlMerger
 
                 // Parse the YAML.
                 String yamlString = writer.toString();
-                final Map<String, Object> yamlToMerge = (Map<String, Object>) this.snakeYaml.load(yamlString);
+                final Map<String, Object> yamlToMerge = this.snakeYaml.load(yamlString);
 
                 // Merge into results map.
                 mergeStructures(mergedResult, yamlToMerge);
@@ -166,9 +163,9 @@ public class YmlMerger
         return new IllegalArgumentException(msg);
     }
 
-    private static Object addToMergedResult(Map<String, Object> mergedResult, String key, Object yamlValue)
+    private static void addToMergedResult(Map<String, Object> mergedResult, String key, Object yamlValue)
     {
-        return mergedResult.put(key, yamlValue);
+        mergedResult.put(key, yamlValue);
     }
 
     @SuppressWarnings("unchecked")
