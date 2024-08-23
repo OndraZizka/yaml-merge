@@ -12,8 +12,16 @@ class YamlMergerTest {
     private val yaml = Yaml()
     private val merger = YamlMerger()
 
+    private val log: Logger = LoggerFactory.getLogger(YamlMergerTest::class.java)
+
+    val YAML_1: String = getResourceFile("test1.yaml")
+    val YAML_2: String = getResourceFile("test2.yaml")
+    val YAML_NULL: String = getResourceFile("test-null.yaml")
+    val YAML_COLON: String = getResourceFile("test-colon.yaml")
+    val MERGE_YAML_1: String = getResourceFile("testListMerge1.yaml")
+    val MERGE_YAML_2: String = getResourceFile("testListMerge2.yaml")
+
     @Test
-    @Throws(Exception::class)
     fun testMerge2Files() {
         val merged = merger.mergeYamlFiles(arrayOf(YAML_1, YAML_2))
         var dbconfig = merged["database"] as Map<String, Any>?
@@ -21,7 +29,7 @@ class YamlMergerTest {
         Assertions.assertEquals(dbconfig["url"], "jdbc:mysql://localhost:3306/some-db", "wrong db url")
 
         val mergedYmlString = merger.exportToString(merged)
-        LOG.info("Resulting YAML: \n$mergedYmlString")
+        log.info("Resulting YAML: \n$mergedYmlString")
 
         val reloadedYaml = yaml.load<Map<String, Any>>(mergedYmlString)
         dbconfig = reloadedYaml["database"] as Map<String, Any>?
@@ -32,7 +40,6 @@ class YamlMergerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testMergeFileIntoSelf() {
         val merged = merger.mergeYamlFiles(arrayOf(YAML_1, YAML_1))
         val dbconfig = merged["database"] as Map<String, Any>?
@@ -41,7 +48,6 @@ class YamlMergerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testNullValue() {
         val merged = merger.mergeYamlFiles(arrayOf(YAML_NULL))
         Assertions.assertNotNull(merged["prop1"])
@@ -49,7 +55,6 @@ class YamlMergerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testSubstitutionValueWithColon() {
         val variables = Collections.singletonMap("ENV_VAR", "localhost")
         val merged = YamlMerger().setVariablesToReplace(variables).mergeYamlFiles(arrayOf(YAML_COLON))
@@ -60,7 +65,6 @@ class YamlMergerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testMerge2Lists() {
         val merged = merger.mergeYamlFiles(arrayOf(MERGE_YAML_1, MERGE_YAML_2))
         val hash1 = merged["hashlevel1"] as Map<String, Any>?
@@ -74,19 +78,6 @@ class YamlMergerTest {
         Assertions.assertEquals(optionSet2["option_name"], "option2")
     }
 
-    companion object {
-        private val LOG: Logger = LoggerFactory.getLogger(YamlMergerTest::class.java)
 
-        val YAML_1: String = getResourceFile("test1.yaml")
-        val YAML_2: String = getResourceFile("test2.yaml")
-        val YAML_NULL: String = getResourceFile("test-null.yaml")
-        val YAML_COLON: String = getResourceFile("test-colon.yaml")
-        val MERGE_YAML_1: String = getResourceFile("testListMerge1.yaml")
-        val MERGE_YAML_2: String = getResourceFile("testListMerge2.yaml")
-
-
-        fun getResourceFile(file: String): String {
-            return File(System.getProperty("user.dir") + "/src/test/resources/" + file).absolutePath
-        }
-    }
+    fun getResourceFile(file: String) = File(System.getProperty("user.dir") + "/src/test/resources/" + file).absolutePath
 }
