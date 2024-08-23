@@ -1,98 +1,92 @@
-package ch.zizka.yaml.merger;
+package ch.zizka.yaml.merger
 
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.yaml.snakeyaml.Yaml;
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.yaml.snakeyaml.Yaml
+import java.io.File
+import java.util.*
 
-import java.io.File;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+class YamlMergerTest {
+    private val yaml = Yaml()
+    private val merger = YamlMerger()
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+    @Test
+    @Throws(Exception::class)
+    fun testMerge2Files() {
+        val merged = merger.mergeYamlFiles(arrayOf(YAML_1, YAML_2))
+        var dbconfig = merged["database"] as Map<String, Any>?
+        Assertions.assertEquals(dbconfig!!["user"].toString(), "alternate-user", "wrong user")
+        Assertions.assertEquals(dbconfig["url"], "jdbc:mysql://localhost:3306/some-db", "wrong db url")
 
-public class YamlMergerTest {
+        val mergedYmlString = merger.exportToString(merged)
+        LOG.info("Resulting YAML: \n$mergedYmlString")
 
-    private static final Logger LOG = LoggerFactory.getLogger(YamlMergerTest.class);
-
-    public static final String YAML_1 = getResourceFile("test1.yaml");
-    public static final String YAML_2 = getResourceFile("test2.yaml");
-    public static final String YAML_NULL = getResourceFile("test-null.yaml");
-    public static final String YAML_COLON = getResourceFile("test-colon.yaml");
-    public static final String MERGE_YAML_1 = getResourceFile("testListMerge1.yaml");
-    public static final String MERGE_YAML_2 = getResourceFile("testListMerge2.yaml");
-
-
-    private final Yaml yaml = new Yaml();
-    private final YamlMerger merger = new YamlMerger();
-
-    @SuppressWarnings({ "unchecked" })
-	@Test
-    public void testMerge2Files () throws Exception {
-        final Map<String, Object> merged = merger.mergeYamlFiles(new String[]{YAML_1, YAML_2});
-        Map<String, Object> dbconfig;
-        dbconfig = (Map<String, Object>) merged.get("database");
-        assertEquals(dbconfig.get("user").toString(), "alternate-user", "wrong user");
-        assertEquals(dbconfig.get("url"), "jdbc:mysql://localhost:3306/some-db", "wrong db url");
-
-        final String mergedYmlString = merger.exportToString(merged);
-        LOG.info("Resulting YAML: \n"+ mergedYmlString);
-
-        final Map<String, Object> reloadedYaml = yaml.load(mergedYmlString);
-        dbconfig = (Map<String, Object>) reloadedYaml.get("database");
-        assertEquals(dbconfig.get("user"), "alternate-user", "wrong user");
-        assertEquals(dbconfig.get("url"), "jdbc:mysql://localhost:3306/some-db", "wrong db url");
-        Map<String, Object> dbProperties = (Map<String, Object>) dbconfig.get("properties");
-        assertEquals(dbProperties.get("hibernate.dialect"), "org.hibernate.dialect.MySQL5InnoDBDialect", "wrong db url");
-    }
-
-    @SuppressWarnings({ "unchecked" })
-	@org.junit.jupiter.api.Test
-    public void testMergeFileIntoSelf () throws Exception {
-        final Map<String, Object> merged = merger.mergeYamlFiles(new String[]{YAML_1, YAML_1});
-        final Map<String, Object> dbconfig = (Map<String, Object>) merged.get("database");
-        assertEquals(dbconfig.get("user"), "some-user", "wrong user");
-        assertEquals(dbconfig.get("url"), "jdbc:mysql://localhost:3306/some-db", "wrong db url");
+        val reloadedYaml = yaml.load<Map<String, Any>>(mergedYmlString)
+        dbconfig = reloadedYaml["database"] as Map<String, Any>?
+        Assertions.assertEquals(dbconfig!!["user"], "alternate-user", "wrong user")
+        Assertions.assertEquals(dbconfig["url"], "jdbc:mysql://localhost:3306/some-db", "wrong db url")
+        val dbProperties = dbconfig["properties"] as Map<String, Any>?
+        Assertions.assertEquals(dbProperties!!["hibernate.dialect"], "org.hibernate.dialect.MySQL5InnoDBDialect", "wrong db url")
     }
 
     @Test
-    public void testNullValue () throws Exception {
-        final Map<String, Object> merged = merger.mergeYamlFiles(new String[]{YAML_NULL});
-        assertNotNull(merged.get("prop1"));
-        assertNull(merged.get("prop2"));
+    @Throws(Exception::class)
+    fun testMergeFileIntoSelf() {
+        val merged = merger.mergeYamlFiles(arrayOf(YAML_1, YAML_1))
+        val dbconfig = merged["database"] as Map<String, Any>?
+        Assertions.assertEquals(dbconfig!!["user"], "some-user", "wrong user")
+        Assertions.assertEquals(dbconfig["url"], "jdbc:mysql://localhost:3306/some-db", "wrong db url")
     }
 
-    @SuppressWarnings({"unchecked"})
-	@Test
-    public void testSubstitutionValueWithColon () throws Exception {
-        Map<String, String> variables = Collections.singletonMap("ENV_VAR", "localhost");
-        final Map<String, Object> merged = new YamlMerger().setVariablesToReplace(variables).mergeYamlFiles(new String[]{YAML_COLON});
-        final Map<String, Object> hash = (Map<String, Object>) merged.get("memcache");
-        assertEquals(hash.get("one_key"), "value1");
-        assertEquals(hash.get("another_key"), "localhost:22133");
-        assertEquals(hash.get("some_other_key"), "value2");
+    @Test
+    @Throws(Exception::class)
+    fun testNullValue() {
+        val merged = merger.mergeYamlFiles(arrayOf(YAML_NULL))
+        Assertions.assertNotNull(merged["prop1"])
+        Assertions.assertNull(merged["prop2"])
     }
 
-    @SuppressWarnings({"unchecked"})
-	@Test
-    public void testMerge2Lists () throws Exception {
-        final Map<String, Object> merged = merger.mergeYamlFiles(new String[]{MERGE_YAML_1, MERGE_YAML_2});
-        Map<String, Object> hash1 = (Map<String, Object>) merged.get("hashlevel1");
-        List<Object> list1 = (List<Object>) hash1.get("listlevel2");
-        assertEquals(list1.size(), 2, "NotEnoughEntries");
-        Map<String, Object> optionSet1 = (Map<String, Object>) list1.get(0);
-        Map<String, Object> optionSet2 = (Map<String, Object>) list1.get(1);
-        assertEquals(optionSet1.get("namespace"), "namespace1");
-        assertEquals(optionSet1.get("option_name"), "option1");
-        assertEquals(optionSet2.get("namespace"), "namespace2");
-        assertEquals(optionSet2.get("option_name"), "option2");
+    @Test
+    @Throws(Exception::class)
+    fun testSubstitutionValueWithColon() {
+        val variables = Collections.singletonMap("ENV_VAR", "localhost")
+        val merged = YamlMerger().setVariablesToReplace(variables).mergeYamlFiles(arrayOf(YAML_COLON))
+        val hash = merged["memcache"] as Map<String, Any>?
+        Assertions.assertEquals(hash!!["one_key"], "value1")
+        Assertions.assertEquals(hash["another_key"], "localhost:22133")
+        Assertions.assertEquals(hash["some_other_key"], "value2")
     }
 
-    public static String getResourceFile(String file) {
-        return new File(System.getProperty("user.dir")+"/src/test/resources/"+ file).getAbsolutePath();
+    @Test
+    @Throws(Exception::class)
+    fun testMerge2Lists() {
+        val merged = merger.mergeYamlFiles(arrayOf(MERGE_YAML_1, MERGE_YAML_2))
+        val hash1 = merged["hashlevel1"] as Map<String, Any>?
+        val list1 = hash1!!["listlevel2"] as List<Any>?
+        Assertions.assertEquals(list1!!.size, 2, "NotEnoughEntries")
+        val optionSet1 = list1[0] as Map<String, Any>
+        val optionSet2 = list1[1] as Map<String, Any>
+        Assertions.assertEquals(optionSet1["namespace"], "namespace1")
+        Assertions.assertEquals(optionSet1["option_name"], "option1")
+        Assertions.assertEquals(optionSet2["namespace"], "namespace2")
+        Assertions.assertEquals(optionSet2["option_name"], "option2")
     }
 
+    companion object {
+        private val LOG: Logger = LoggerFactory.getLogger(YamlMergerTest::class.java)
+
+        val YAML_1: String = getResourceFile("test1.yaml")
+        val YAML_2: String = getResourceFile("test2.yaml")
+        val YAML_NULL: String = getResourceFile("test-null.yaml")
+        val YAML_COLON: String = getResourceFile("test-colon.yaml")
+        val MERGE_YAML_1: String = getResourceFile("testListMerge1.yaml")
+        val MERGE_YAML_2: String = getResourceFile("testListMerge2.yaml")
+
+
+        fun getResourceFile(file: String): String {
+            return File(System.getProperty("user.dir") + "/src/test/resources/" + file).absolutePath
+        }
+    }
 }

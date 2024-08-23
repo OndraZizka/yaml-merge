@@ -1,206 +1,178 @@
-package ch.zizka.yaml.merger;
+@file:Suppress("LoggingStringTemplateAsArgument")
 
-import com.github.mustachejava.DefaultMustacheFactory;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TimeZone;
-import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.Yaml;
+package ch.zizka.yaml.merger
 
-public class YamlMerger
-{
+import com.github.mustachejava.DefaultMustacheFactory
+import org.apache.commons.io.IOUtils
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.yaml.snakeyaml.DumperOptions
+import org.yaml.snakeyaml.Yaml
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStream
+import java.io.StringReader
+import java.io.StringWriter
+import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.util.*
 
-    private static final Logger LOG = LoggerFactory.getLogger(YamlMerger.class);
-    public static final DefaultMustacheFactory DEFAULT_MUSTACHE_FACTORY = new DefaultMustacheFactory();
+class YamlMerger {
+    private val snakeYaml: Yaml
+    private val variablesToReplace: MutableMap<String, Any> = HashMap()
 
-    private final Yaml snakeYaml;
-    private final Map<String, Object> variablesToReplace = new HashMap<>();
-
-    public YamlMerger()
-    {
+    init {
         // See https://github.com/spariev/snakeyaml/blob/master/src/test/java/org/yaml/snakeyaml/DumperOptionsTest.java
-        DumperOptions dumperOptions = new DumperOptions();
-        dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-        dumperOptions.setPrettyFlow(true);
+        val dumperOptions = DumperOptions()
+        dumperOptions.defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
+        dumperOptions.isPrettyFlow = true
         //dumperOptions.setCanonical(true);
-        dumperOptions.setTimeZone(TimeZone.getTimeZone("UTC"));
-        this.snakeYaml = new Yaml(dumperOptions);
+        dumperOptions.timeZone = TimeZone.getTimeZone("UTC")
+        this.snakeYaml = Yaml(dumperOptions)
     }
 
-    public YamlMerger setVariablesToReplace(Map<String, String> vars) {
-        this.variablesToReplace.clear();
-        this.variablesToReplace.putAll(vars);
-        return this;
+    fun setVariablesToReplace(vars: Map<String, String>): YamlMerger {
+        variablesToReplace.clear()
+        variablesToReplace.putAll(vars)
+        return this
     }
 
 
-
-    public Map<String, Object> mergeYamlFiles(String[] pathsStr) throws IOException {
-        return mergeYamlFiles(stringsToPaths(pathsStr));
+    @Throws(IOException::class)
+    fun mergeYamlFiles(pathsStr: Array<String>): Map<String, Any?> {
+        return mergeYamlFiles(stringsToPaths(pathsStr))
     }
 
     /**
      * Merges the files at given paths to a map representing the resulting YAML structure.
      */
-    public Map<String, Object> mergeYamlFiles(List<Path> paths) throws IOException
-    {
-        Map<String, Object> mergedResult = new LinkedHashMap<>();
-        for (Path yamlFilePath : paths) {
-            InputStream in = null;
+    @Throws(IOException::class)
+    fun mergeYamlFiles(paths: List<Path>): Map<String, Any?> {
+        val mergedResult: MutableMap<String, Any?> = LinkedHashMap()
+        for (yamlFilePath in paths) {
+            var `in`: InputStream? = null
             try {
-                File file = yamlFilePath.toFile();
-                if (!file.exists())
-                    throw new FileNotFoundException("YAML file to merge not found: " + file.getCanonicalPath());
+                val file = yamlFilePath.toFile()
+                if (!file.exists()) throw FileNotFoundException("YAML file to merge not found: " + file.canonicalPath)
 
                 // Read the YAML file into a String
-                in = new FileInputStream(file);
-                final String entireFile = IOUtils.toString(in, StandardCharsets.UTF_8); // TBD allow setting the charset?
+                `in` = FileInputStream(file)
+                val entireFile = IOUtils.toString(`in`, StandardCharsets.UTF_8) // TBD allow setting the charset?
 
                 // Substitute variables. TODO: This should be done by a resolver when parsing.
-                int bufferSize = entireFile.length() + 100;
-                final StringWriter writer = new StringWriter(bufferSize);
-                DEFAULT_MUSTACHE_FACTORY.compile(new StringReader(entireFile), "yaml-mergeYamlFiles-" + System.currentTimeMillis()).execute(writer, variablesToReplace);
+                val bufferSize = entireFile.length + 100
+                val writer = StringWriter(bufferSize)
+                DEFAULT_MUSTACHE_FACTORY.compile(StringReader(entireFile), "yaml-mergeYamlFiles-" + System.currentTimeMillis())
+                    .execute(writer, variablesToReplace)
 
                 // Parse the YAML.
-                String yamlString = writer.toString();
-                final Map<String, Object> yamlToMerge = this.snakeYaml.load(yamlString);
+                val yamlString = writer.toString()
+                val yamlToMerge = snakeYaml.load<Map<String, Any>>(yamlString)
 
                 // Merge into results map.
-                mergeStructures(mergedResult, yamlToMerge);
-                LOG.debug("Loaded YAML from " + yamlFilePath + ": " + yamlToMerge);
+                mergeStructures(mergedResult, yamlToMerge)
+                LOG.debug("Loaded YAML from $yamlFilePath: $yamlToMerge")
             }
             finally {
-                if (in != null) in.close();
+                `in`?.close()
             }
         }
-        return mergedResult;
+        return mergedResult
     }
 
-    @SuppressWarnings("unchecked")
-    private void mergeStructures(Map<String, Object> targetTree, Map<String, Object> sourceTree)
-    {
-        if (sourceTree == null)  return;
+    private fun mergeStructures(targetTree: MutableMap<String, Any?>, sourceTree: Map<String, Any>?) {
+        if (sourceTree == null) return
 
-        for (String key : sourceTree.keySet()) {
-
-            Object yamlValue = sourceTree.get(key);
+        for (key in sourceTree.keys) {
+            val yamlValue = sourceTree[key]
             if (yamlValue == null) {
-                addToMergedResult(targetTree, key, yamlValue);
-                continue;
+                addToMergedResult(targetTree, key, yamlValue)
+                continue
             }
 
-            Object existingValue = targetTree.get(key);
+            val existingValue = targetTree[key]
             if (existingValue != null) {
-                if (yamlValue instanceof Map) {
-                    if (existingValue instanceof Map) {
-                        mergeStructures((Map<String, Object>) existingValue, (Map<String, Object>) yamlValue);
+                if (yamlValue is Map<*, *>) {
+                    if (existingValue is Map<*, *>) {
+                        mergeStructures(existingValue as MutableMap<String, Any?>, yamlValue as Map<String, Any>)
                     }
-                    else if (existingValue instanceof String) {
-                        throw new IllegalArgumentException("Cannot mergeYamlFiles complex element into a simple element: " + key);
-                    }
-                    else {
-                        throw unknownValueType(key, yamlValue);
-                    }
+                    else if (existingValue is String) { throw IllegalArgumentException("Cannot mergeYamlFiles complex element into a simple element: $key") }
+                    else throw unknownValueType(key, yamlValue)
                 }
-                else if (yamlValue instanceof List) {
-                    mergeLists(targetTree, key, yamlValue);
-
+                else if (yamlValue is List<*>) {
+                    mergeLists(targetTree, key, yamlValue)
                 }
-                else if (yamlValue instanceof String
-                        || yamlValue instanceof Boolean
-                        || yamlValue instanceof Double
-                        || yamlValue instanceof Integer)
-                {
-                    LOG.debug("Overriding value of " + key + " with value " + yamlValue);
-                    addToMergedResult(targetTree, key, yamlValue);
-
+                else if (yamlValue is String
+                    || yamlValue is Boolean
+                    || yamlValue is Double
+                    || yamlValue is Int
+                ) {
+                    LOG.debug("Overriding value of $key with value $yamlValue")
+                    addToMergedResult(targetTree, key, yamlValue)
                 }
                 else {
-                    throw unknownValueType(key, yamlValue);
+                    throw unknownValueType(key, yamlValue)
                 }
-
-            }
-            else {
-                if (yamlValue instanceof Map
-                        || yamlValue instanceof List
-                        || yamlValue instanceof String
-                        || yamlValue instanceof Boolean
-                        || yamlValue instanceof Integer
-                        || yamlValue instanceof Double)
-                {
-                    LOG.debug("Adding new key->value: " + key + " -> " + yamlValue);
-                    addToMergedResult(targetTree, key, yamlValue);
-                }
-                else {
-                    throw unknownValueType(key, yamlValue);
+            } else {
+                if (yamlValue is Map<*, *>
+                    || yamlValue is List<*>
+                    || yamlValue is String
+                    || yamlValue is Boolean
+                    || yamlValue is Int
+                    || yamlValue is Double
+                ) {
+                    LOG.debug("Adding new key->value: $key -> $yamlValue")
+                    addToMergedResult(targetTree, key, yamlValue)
+                } else {
+                    throw unknownValueType(key, yamlValue)
                 }
             }
         }
     }
 
-    private static IllegalArgumentException unknownValueType(String key, Object yamlValue)
-    {
-        final String msg = "Cannot mergeYamlFiles element of unknown type: " + key + ": " + yamlValue.getClass().getName();
-        LOG.error(msg);
-        return new IllegalArgumentException(msg);
+    @Throws(IOException::class)
+    fun mergeToString(filesToMerge: List<Path>): String {
+        val merged = mergeYamlFiles(filesToMerge)
+        return exportToString(merged)
     }
 
-    private static void addToMergedResult(Map<String, Object> mergedResult, String key, Object yamlValue)
-    {
-        mergedResult.put(key, yamlValue);
+    fun exportToString(merged: Map<String, Any?>?): String {
+        return snakeYaml.dump(merged)
     }
 
-    @SuppressWarnings("unchecked")
-    private static void mergeLists(Map<String, Object> mergedResult, String key, Object yamlValue)
-    {
-        if (!(yamlValue instanceof List && mergedResult.get(key) instanceof List)) {
-            throw new IllegalArgumentException("Cannot mergeYamlFiles a list with a non-list: " + key);
+    companion object {
+        private val LOG: Logger = LoggerFactory.getLogger(YamlMerger::class.java)
+        val DEFAULT_MUSTACHE_FACTORY: DefaultMustacheFactory = DefaultMustacheFactory()
+
+        private fun unknownValueType(key: String, yamlValue: Any): IllegalArgumentException {
+            val msg = "Cannot mergeYamlFiles element of unknown type: " + key + ": " + yamlValue.javaClass.name
+            LOG.error(msg)
+            return IllegalArgumentException(msg)
         }
 
-        List<Object> originalList = (List<Object>) mergedResult.get(key);
-        originalList.addAll((List<Object>) yamlValue);
-    }
-
-
-    public String mergeToString(List<Path> filesToMerge) throws IOException
-    {
-        Map<String, Object> merged = mergeYamlFiles(filesToMerge);
-        return exportToString(merged);
-    }
-
-    public String exportToString(Map<String, Object> merged)
-    {
-        return snakeYaml.dump(merged);
-    }
-
-    // Util methods
-
-    public static List<Path> stringsToPaths(String[] pathsStr) {
-        Set<Path> paths = new LinkedHashSet<>();
-        for (String pathStr : pathsStr) {
-            paths.add(Paths.get(pathStr));
+        private fun addToMergedResult(mergedResult: MutableMap<String, Any?>, key: String, yamlValue: Any?) {
+            mergedResult[key] = yamlValue
         }
-        List<Path> pathsList = new ArrayList<>(paths.size());
-        pathsList.addAll(paths);
-        return pathsList;
-    }
 
+        private fun mergeLists(mergedResult: Map<String, Any?>, key: String, yamlValue: Any) {
+            require(yamlValue is List<*> && mergedResult[key] is List<*>) { "Cannot mergeYamlFiles a list with a non-list: $key" }
+
+            val originalList = mergedResult[key] as MutableList<Any>?
+            originalList!!.addAll(yamlValue as List<Any>)
+        }
+
+
+        // Util methods
+        fun stringsToPaths(pathsStr: Array<String>): List<Path> {
+            val paths: MutableSet<Path> = LinkedHashSet()
+            for (pathStr in pathsStr) {
+                paths.add(Paths.get(pathStr))
+            }
+            val pathsList: MutableList<Path> = ArrayList(paths.size)
+            pathsList.addAll(paths)
+            return pathsList
+        }
+    }
 }
