@@ -1,6 +1,6 @@
 package ch.zizka.yaml.merger;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
@@ -10,7 +10,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class YamlMergerTest {
 
@@ -33,27 +35,27 @@ public class YamlMergerTest {
         final Map<String, Object> merged = merger.mergeYamlFiles(new String[]{YAML_1, YAML_2});
         Map<String, Object> dbconfig;
         dbconfig = (Map<String, Object>) merged.get("database");
-        assertEquals("wrong user", dbconfig.get("user"), "alternate-user");
-        assertEquals("wrong db url", dbconfig.get("url"), "jdbc:mysql://localhost:3306/some-db");
+        assertEquals(dbconfig.get("user").toString(), "alternate-user", "wrong user");
+        assertEquals(dbconfig.get("url"), "jdbc:mysql://localhost:3306/some-db", "wrong db url");
 
         final String mergedYmlString = merger.exportToString(merged);
         LOG.info("Resulting YAML: \n"+ mergedYmlString);
 
         final Map<String, Object> reloadedYaml = yaml.load(mergedYmlString);
         dbconfig = (Map<String, Object>) reloadedYaml.get("database");
-        assertEquals("wrong user", dbconfig.get("user"), "alternate-user");
-        assertEquals("wrong db url", dbconfig.get("url"), "jdbc:mysql://localhost:3306/some-db");
+        assertEquals(dbconfig.get("user"), "alternate-user", "wrong user");
+        assertEquals(dbconfig.get("url"), "jdbc:mysql://localhost:3306/some-db", "wrong db url");
         Map<String, Object> dbProperties = (Map<String, Object>) dbconfig.get("properties");
-        assertEquals("wrong db url", dbProperties.get("hibernate.dialect"), "org.hibernate.dialect.MySQL5InnoDBDialect");
+        assertEquals(dbProperties.get("hibernate.dialect"), "org.hibernate.dialect.MySQL5InnoDBDialect", "wrong db url");
     }
 
     @SuppressWarnings({ "unchecked" })
-	@Test
+	@org.junit.jupiter.api.Test
     public void testMergeFileIntoSelf () throws Exception {
         final Map<String, Object> merged = merger.mergeYamlFiles(new String[]{YAML_1, YAML_1});
         final Map<String, Object> dbconfig = (Map<String, Object>) merged.get("database");
-        assertEquals("wrong user", dbconfig.get("user"), "some-user");
-        assertEquals("wrong db url", dbconfig.get("url"), "jdbc:mysql://localhost:3306/some-db");
+        assertEquals(dbconfig.get("user"), "some-user", "wrong user");
+        assertEquals(dbconfig.get("url"), "jdbc:mysql://localhost:3306/some-db", "wrong db url");
     }
 
     @Test
@@ -80,7 +82,7 @@ public class YamlMergerTest {
         final Map<String, Object> merged = merger.mergeYamlFiles(new String[]{MERGE_YAML_1, MERGE_YAML_2});
         Map<String, Object> hash1 = (Map<String, Object>) merged.get("hashlevel1");
         List<Object> list1 = (List<Object>) hash1.get("listlevel2");
-        assertEquals("NotEnoughEntries", list1.size(), 2);
+        assertEquals(list1.size(), 2, "NotEnoughEntries");
         Map<String, Object> optionSet1 = (Map<String, Object>) list1.get(0);
         Map<String, Object> optionSet2 = (Map<String, Object>) list1.get(1);
         assertEquals(optionSet1.get("namespace"), "namespace1");
