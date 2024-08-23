@@ -1,29 +1,25 @@
-package ch.zizka.yaml.merger.main;
+package ch.zizka.yaml.merger.main
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import ch.zizka.yaml.merger.YamlMerger
+import java.nio.file.Path
+import java.nio.file.Paths
 
-import ch.zizka.yaml.merger.YamlMerger;
+object MergeYaml {
+    @Throws(Exception::class)
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val yamlMerger = YamlMerger()
+        yamlMerger.setVariablesToReplace(System.getenv())
 
-public class MergeYaml {
-
-    public static void main (String[] args) throws Exception {
-
-        YamlMerger yamlMerger = new YamlMerger();
-        yamlMerger.setVariablesToReplace(System.getenv());
-
-        List<Path> filesToMerge = new ArrayList<>();
+        val filesToMerge: MutableList<Path> = ArrayList()
 
         //Arrays.asList(args).stream().map(Paths::get).collect(Collectors.toSet());
-        for (String arg : args) {
-            filesToMerge.add(Paths.get(arg));
+        for (arg in args) {
+            filesToMerge.add(Paths.get(arg))
         }
 
-        String resultingYaml = yamlMerger.mergeToString(filesToMerge);
+        val resultingYaml = yamlMerger.mergeToString(filesToMerge)
 
-        System.out.println(resultingYaml);
+        println(resultingYaml)
     }
-
 }
