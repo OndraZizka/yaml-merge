@@ -52,14 +52,14 @@ class YamlMerger {
     fun mergeYamlFiles(paths: List<Path>): Map<String, Any?> {
         val mergedResult: MutableMap<String, Any?> = LinkedHashMap()
         for (yamlFilePath in paths) {
-            var `in`: InputStream? = null
+            var inputStream: InputStream? = null
             try {
                 val file = yamlFilePath.toFile()
                 if (!file.exists()) throw FileNotFoundException("YAML file to merge not found: " + file.canonicalPath)
 
                 // Read the YAML file into a String
-                `in` = FileInputStream(file)
-                val entireFile = IOUtils.toString(`in`, StandardCharsets.UTF_8) // TBD allow setting the charset?
+                inputStream = FileInputStream(file)
+                val entireFile = IOUtils.toString(inputStream, StandardCharsets.UTF_8) // TBD allow setting the charset?
 
                 // Substitute variables. TODO: This should be done by a resolver when parsing.
                 val bufferSize = entireFile.length + 100
@@ -76,7 +76,7 @@ class YamlMerger {
                 LOG.debug("Loaded YAML from $yamlFilePath: $yamlToMerge")
             }
             finally {
-                `in`?.close()
+                inputStream?.close()
             }
         }
         return mergedResult
