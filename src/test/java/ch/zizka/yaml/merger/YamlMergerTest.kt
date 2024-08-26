@@ -1,6 +1,7 @@
 package ch.zizka.yaml.merger
 
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -37,6 +38,15 @@ class YamlMergerTest {
         Assertions.assertEquals(dbconfig["url"], "jdbc:mysql://localhost:3306/some-db", "wrong db url")
         val dbProperties = dbconfig["properties"] as Map<String, Any>?
         Assertions.assertEquals(dbProperties!!["hibernate.dialect"], "org.hibernate.dialect.MySQL5InnoDBDialect", "wrong db url")
+    }
+
+    @Test @Disabled("I need to generate some test data.")
+    fun testMerge2Files_Large() {
+        val merged = merger.mergeYamlFiles(arrayOf(
+            getResourceFile("largeFiles_/report-2024-08-23-part1.json"),
+            getResourceFile("largeFiles_/report-2024-08-23-part2.json"),
+        ))
+        val mergedYmlString = merger.exportToString(merged)
     }
 
     @Test

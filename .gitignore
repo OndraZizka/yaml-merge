@@ -9,3 +9,8 @@ target/
 .project
 *.prefs
 .classpath
+
+## Don't publish.
+/src/test/resources/largeFiles/report-2024-08-23-part1.json
+/src/test/resources/largeFiles/report-2024-08-23-part2.json
+/src/test/resources/largeFiles/report-2024-08-23-part3.json
