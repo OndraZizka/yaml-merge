@@ -42,6 +42,7 @@ class YamlMergerTest {
     @Test
     fun testMergeFileIntoSelf() {
         val merged = merger.mergeYamlFiles(arrayOf(YAML_1, YAML_1))
+
         val dbconfig = merged["database"] as Map<String, Any>?
         Assertions.assertEquals(dbconfig!!["user"], "some-user", "wrong user")
         Assertions.assertEquals(dbconfig["url"], "jdbc:mysql://localhost:3306/some-db", "wrong db url")
@@ -50,6 +51,7 @@ class YamlMergerTest {
     @Test
     fun testNullValue() {
         val merged = merger.mergeYamlFiles(arrayOf(YAML_NULL))
+
         Assertions.assertNotNull(merged["prop1"])
         Assertions.assertNull(merged["prop2"])
     }
@@ -58,6 +60,7 @@ class YamlMergerTest {
     fun testSubstitutionValueWithColon() {
         val variables = Collections.singletonMap("ENV_VAR", "localhost")
         val merged = YamlMerger().setVariablesToReplace(variables).mergeYamlFiles(arrayOf(YAML_COLON))
+
         val hash = merged["memcache"] as Map<String, Any>?
         Assertions.assertEquals(hash!!["one_key"], "value1")
         Assertions.assertEquals(hash["another_key"], "localhost:22133")
@@ -67,6 +70,7 @@ class YamlMergerTest {
     @Test
     fun testMerge2Lists() {
         val merged = merger.mergeYamlFiles(arrayOf(MERGE_YAML_1, MERGE_YAML_2))
+
         val hash1 = merged["hashlevel1"] as Map<String, Any>?
         val list1 = hash1!!["listlevel2"] as List<Any>?
         Assertions.assertEquals(list1!!.size, 2, "NotEnoughEntries")
