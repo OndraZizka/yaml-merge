@@ -7,7 +7,10 @@ import org.apache.commons.io.IOUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.yaml.snakeyaml.DumperOptions
+import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.Constructor
+import org.yaml.snakeyaml.representer.Representer
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -30,7 +33,11 @@ class YamlMerger {
         dumperOptions.isPrettyFlow = true
         //dumperOptions.setCanonical(true);
         dumperOptions.timeZone = TimeZone.getTimeZone("UTC")
-        this.snakeYaml = Yaml(dumperOptions)
+        //this.snakeYaml = Yaml(dumperOptions)
+
+        val loadingConfig = LoaderOptions()
+        loadingConfig.codePointLimit = 200 * 1024 * 1024
+        this.snakeYaml = Yaml(Constructor(loadingConfig), Representer(dumperOptions), dumperOptions, loadingConfig);
     }
 
     fun setVariablesToReplace(vars: Map<String, String>): YamlMerger {
